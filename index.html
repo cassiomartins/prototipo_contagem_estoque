@@ -3,96 +3,139 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Lista do Bruno</title>
+    <title>Compras App</title>
     <style>
-        :root { --p: #2ecc71; --bg: #f4f7f6; }
-        body { font-family: -apple-system, sans-serif; background: var(--bg); margin: 0; padding: 15px 15px 100px 15px; }
+        :root { --p: #27ae60; --bg: #f0f2f5; --danger: #e74c3c; }
+        body { font-family: -apple-system, sans-serif; background: var(--bg); margin: 0; padding: 10px; padding-bottom: 100px; }
+        
         .header { 
-            position: sticky; top: 10px; background: var(--p); color: white; 
-            padding: 15px; border-radius: 15px; text-align: center; 
-            box-shadow: 0 4px 10px rgba(0,0,0,0.1); z-index: 10; margin-bottom: 20px;
+            position: sticky; top: 0; background: var(--p); color: white; 
+            padding: 20px; border-radius: 0 0 20px 20px; text-align: center; 
+            margin: -10px -10px 20px -10px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); z-index: 100;
         }
-        .cat { background: white; border-radius: 12px; padding: 15px; margin-bottom: 15px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); }
-        .cat h2 { font-size: 0.75rem; color: #999; text-transform: uppercase; margin: 0 0 10px 0; border-bottom: 1px solid #eee; }
-        .row { display: flex; align-items: center; justify-content: space-between; padding: 12px 0; border-bottom: 1px solid #f9f9f9; }
-        .check-area { display: flex; align-items: center; flex: 1; }
-        input[type="checkbox"] { width: 22px; height: 22px; margin-right: 12px; }
-        input[type="checkbox"]:checked + span { text-decoration: line-through; color: #ccc; }
-        .price { width: 85px; padding: 8px; border: 1px solid #ddd; border-radius: 8px; text-align: right; font-size: 1rem; }
-        .btn-limpar { background: #e74c3c; color: white; border: none; padding: 10px; border-radius: 8px; width: 100%; margin-top: 10px; font-weight: bold; }
+        
+        .total-val { font-size: 2.2rem; font-weight: 800; display: block; }
+        
+        .item-card { 
+            background: white; border-radius: 12px; padding: 15px; margin-bottom: 10px;
+            display: flex; align-items: center; justify-content: space-between;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.05); animation: slideIn 0.3s ease;
+        }
+
+        @keyframes slideIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+
+        .item-info { display: flex; align-items: center; flex: 1; }
+        .item-info input[type="checkbox"] { width: 24px; height: 24px; margin-right: 15px; accent-color: var(--p); }
+        .strikethrough { text-decoration: line-through; color: #bbb; }
+
+        .price-tag { font-weight: bold; color: var(--p); font-size: 1.1rem; }
+
+        .controls { 
+            position: fixed; bottom: 20px; left: 0; right: 0; 
+            display: flex; justify-content: space-around; padding: 0 20px; gap: 10px;
+        }
+
+        button { 
+            border: none; border-radius: 50px; padding: 15px 25px; 
+            font-weight: bold; font-size: 1rem; box-shadow: 0 4px 15px rgba(0,0,0,0.2); 
+            cursor: pointer; active: transform: scale(0.95);
+        }
+
+        .btn-add { background: var(--p); color: white; flex: 2; }
+        .btn-reset { background: white; color: var(--danger); flex: 1; border: 1px solid var(--danger); }
+
+        /* Modal Simples */
+        #modal { 
+            display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; 
+            background: rgba(0,0,0,0.5); z-index: 200; align-items: center; justify-content: center;
+        }
+        .modal-content { background: white; padding: 25px; border-radius: 20px; width: 80%; max-width: 400px; }
+        .modal-content input { width: 100%; padding: 12px; margin: 10px 0; border: 1px solid #ddd; border-radius: 10px; font-size: 1rem; box-sizing: border-box; }
     </style>
 </head>
 <body>
 
 <div class="header">
-    <div style="font-size: 0.9rem;">Total no Carrinho</div>
-    <div style="font-size: 2rem; font-weight: bold;">R$ <span id="total">0,00</span></div>
+    <span style="opacity: 0.9;">Total Acumulado</span>
+    <span class="total-val">R$ <span id="display-total">0,00</span></span>
+    <button onclick="document.getElementById('modal').style.display='flex'" style="margin-top:10px; background: rgba(255,255,255,0.2); color: white; padding: 8px 15px; font-size: 0.8rem;">+ Adicionar Item</button>
 </div>
 
-<div id="lista"></div>
-<button class="btn-limpar" onclick="limparTudo()">Limpar Lista</button>
+<div id="lista-container"></div>
+
+<div class="controls">
+    <button class="btn-reset" onclick="reiniciarLista()">Zerar</button>
+    <button class="btn-add" onclick="document.getElementById('modal').style.display='flex'">Novo Item</button>
+</div>
+
+<div id="modal">
+    <div class="modal-content">
+        <h3>Novo Item</h3>
+        <input type="text" id="in-nome" placeholder="Nome do item (ex: Frango)" autofocus>
+        <input type="number" id="in-preco" step="0.01" inputmode="decimal" placeholder="Preço (ex: 25.50)">
+        <div style="display: flex; gap: 10px; margin-top: 10px;">
+            <button onclick="document.getElementById('modal').style.display='none'" style="flex:1; background:#eee;">Cancelar</button>
+            <button onclick="adicionarItem()" style="flex:1; background:var(--p); color:white;">Salvar</button>
+        </div>
+    </div>
+</div>
 
 <script>
-    const categorias = [
-        {t: 'Laticínios e Padaria', i: ['Leite', 'Suquinho', 'Toddy', 'Mussarela', 'Pão de forma', 'Ovos', 'Danubio queijo minas']},
-        {t: 'Higiene', i: ['Lenço umidecido', 'Desodorante']},
-        {t: 'Carnes e Vegetais', i: ['Frango', 'Tomate']},
-        {t: 'Frutas e Bebidas', i: ['Uva', 'Melão', 'Morango', 'Pêra', 'Mamão', 'Coquinha']},
-        {t: 'Mercearia', i: ['Atum', 'Banana', 'Doce de leite', 'Rap10', 'Semente chia', 'Iogurte natural']}
-    ];
+    let itens = JSON.parse(localStorage.getItem('compras_bruno_v2') || '[]');
 
-    const container = document.getElementById('lista');
+    function render() {
+        const container = document.getElementById('lista-container');
+        container.innerHTML = '';
+        let total = 0;
 
-    // Carregar dados salvos
-    const salvos = JSON.parse(localStorage.getItem('compras_bruno') || '{}');
-
-    categorias.forEach((cat, cIdx) => {
-        let div = document.createElement('div');
-        div.className = 'cat';
-        let html = `<h2>${cat.t}</h2>`;
-        cat.i.forEach((item, iIdx) => {
-            const id = `item-${cIdx}-${iIdx}`;
-            const dados = salvos[id] || {checked: false, price: ''};
-            html += `
-            <div class="row">
-                <label class="check-area">
-                    <input type="checkbox" id="ck-${id}" ${dados.checked ? 'checked' : ''} onchange="salvar('${id}')">
-                    <span>${item}</span>
-                </label>
-                <input type="number" id="pr-${id}" step="0.01" class="price" value="${dados.price}" placeholder="0,00" oninput="salvar('${id}')">
-            </div>`;
+        itens.forEach((item, index) => {
+            if(item.checked) total += parseFloat(item.preco);
+            
+            const div = document.createElement('div');
+            div.className = 'item-card';
+            div.innerHTML = `
+                <div class="item-info">
+                    <input type="checkbox" ${item.checked ? 'checked' : ''} onchange="toggleCheck(${index})">
+                    <span class="${item.checked ? 'strikethrough' : ''}">${item.nome}</span>
+                </div>
+                <div class="price-tag">R$ ${parseFloat(item.preco).toFixed(2).replace('.', ',')}</div>
+            `;
+            container.appendChild(div);
         });
-        div.innerHTML = html;
-        container.appendChild(div);
-    });
 
-    function salvar(id) {
-        const check = document.getElementById(`ck-${id}`).checked;
-        const preco = document.getElementById(`pr-${id}`).value;
-        
-        const atual = JSON.parse(localStorage.getItem('compras_bruno') || '{}');
-        atual[id] = {checked: check, price: preco};
-        localStorage.setItem('compras_bruno', JSON.stringify(atual));
-        somar();
+        document.getElementById('display-total').innerText = total.toLocaleString('pt-BR', {minimumFractionDigits: 2});
+        localStorage.setItem('compras_bruno_v2', JSON.stringify(itens));
     }
 
-    function somar() {
-        let t = 0;
-        document.querySelectorAll('.price').forEach(i => {
-            let v = parseFloat(i.value);
-            if(v) t += v;
-        });
-        document.getElementById('total').innerText = t.toLocaleString('pt-BR', {minimumFractionDigits: 2});
-    }
+    function adicionarItem() {
+        const nome = document.getElementById('in-nome').value;
+        const preco = document.getElementById('in-preco').value;
 
-    function limparTudo() {
-        if(confirm('Limpar preços e marcações?')) {
-            localStorage.removeItem('compras_bruno');
-            location.reload();
+        if(nome && preco) {
+            itens.push({ nome, preco: parseFloat(preco), checked: true });
+            document.getElementById('in-nome').value = '';
+            document.getElementById('in-preco').value = '';
+            document.getElementById('modal').style.display = 'none';
+            render();
+        } else {
+            alert("Preencha nome e preço!");
         }
     }
-    
-    somar(); // Inicializa o total
+
+    function toggleCheck(index) {
+        itens[index].checked = !itens[index].checked;
+        render();
+    }
+
+    function reiniciarLista() {
+        if(confirm("Deseja apagar toda a lista atual?")) {
+            itens = [];
+            render();
+        }
+    }
+
+    // Iniciar
+    render();
 </script>
 
 </body>
