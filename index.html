@@ -3,11 +3,11 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Compras App - PDF</title>
+    <title>Lista de Compras Pro</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
     <style>
         :root { --p: #27ae60; --bg: #f0f2f5; --danger: #e74c3c; --blue: #3498db; }
-        body { font-family: -apple-system, sans-serif; background: var(--bg); margin: 0; padding: 10px; padding-bottom: 120px; }
+        body { font-family: -apple-system, sans-serif; background: var(--bg); margin: 0; padding: 10px 10px 120px 10px; }
         
         .header { 
             position: sticky; top: 0; background: var(--p); color: white; 
@@ -23,11 +23,15 @@
             box-shadow: 0 2px 5px rgba(0,0,0,0.05);
         }
 
-        .item-info { display: flex; align-items: center; flex: 1; }
-        .item-info input[type="checkbox"] { width: 24px; height: 24px; margin-right: 15px; accent-color: var(--p); }
+        .item-info { display: flex; flex-direction: column; flex: 1; }
+        .item-main { display: flex; align-items: center; }
+        .item-details { font-size: 0.85rem; color: #7f8c8d; margin-left: 39px; margin-top: 2px; }
+        
+        input[type="checkbox"] { width: 24px; height: 24px; margin-right: 15px; accent-color: var(--p); }
         .strikethrough { text-decoration: line-through; color: #bbb; }
 
-        .price-tag { font-weight: bold; color: var(--p); font-size: 1.1rem; }
+        .price-tag { text-align: right; min-width: 80px; }
+        .subtotal { font-weight: bold; color: var(--p); font-size: 1.1rem; display: block; }
 
         .controls { 
             position: fixed; bottom: 0; left: 0; right: 0; background: white;
@@ -35,31 +39,29 @@
             box-shadow: 0 -5px 15px rgba(0,0,0,0.05);
         }
 
-        button { 
-            border: none; border-radius: 12px; padding: 12px; 
-            font-weight: bold; font-size: 0.9rem; cursor: pointer;
-        }
-
+        button { border: none; border-radius: 12px; padding: 12px; font-weight: bold; cursor: pointer; }
         .btn-add { background: var(--p); color: white; flex: 2; }
         .btn-pdf { background: var(--blue); color: white; flex: 1.5; }
         .btn-reset { background: #eee; color: var(--danger); flex: 1; }
 
-        /* Estilo do Modal */
         #modal { 
             display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; 
             background: rgba(0,0,0,0.5); z-index: 200; align-items: center; justify-content: center;
         }
         .modal-content { background: white; padding: 25px; border-radius: 20px; width: 85%; max-width: 400px; }
-        .modal-content input { width: 100%; padding: 12px; margin: 10px 0; border: 1px solid #ddd; border-radius: 10px; font-size: 1.1rem; box-sizing: border-box; }
-
-        /* Área invisível que será o PDF */
-        #pdf-template { display: none; padding: 40px; color: black; }
+        .modal-content input { width: 100%; padding: 12px; margin: 8px 0; border: 1px solid #ddd; border-radius: 10px; font-size: 1.1rem; box-sizing: border-box; }
+        
+        /* Estilo PDF */
+        #pdf-area { font-family: Arial, sans-serif; padding: 20px; }
+        .pdf-table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+        .pdf-table th { background: #f2f2f2; padding: 10px; text-align: left; border-bottom: 2px solid #ddd; }
+        .pdf-table td { padding: 10px; border-bottom: 1px solid #eee; }
     </style>
 </head>
 <body>
 
 <div class="header">
-    <span style="opacity: 0.9;">Total Marcado</span>
+    <span style="opacity: 0.9;">Total no Carrinho</span>
     <span class="total-val">R$ <span id="display-total">0,00</span></span>
 </div>
 
@@ -71,130 +73,132 @@
     <button class="btn-add" onclick="abrirModal()">+ Item</button>
 </div>
 
-<div id="pdf-area" style="display: none;">
-    <h1 style="color: #27ae60;">Relatório de Compras - Bruno</h1>
-    <p id="pdf-data"></p>
-    <hr>
-    <table style="width: 100%; border-collapse: collapse;" id="pdf-table">
-        <thead>
-            <tr style="border-bottom: 2px solid #333;">
-                <th style="text-align: left; padding: 10px;">Item</th>
-                <th style="text-align: right; padding: 10px;">Preço</th>
-            </tr>
-        </thead>
-        <tbody id="pdf-body"></tbody>
-    </table>
-    <h2 style="text-align: right; margin-top: 30px;">Total: R$ <span id="pdf-total">0,00</span></h2>
-</div>
-
 <div id="modal">
     <div class="modal-content">
-        <h3>Novo Item</h3>
-        <input type="text" id="in-nome" placeholder="Nome (ex: Picanha)">
-        <input type="number" id="in-preco" step="0.01" inputmode="decimal" placeholder="Preço (ex: 89.90)">
-        <div style="display: flex; gap: 10px; margin-top: 10px;">
-            <button onclick="fecharModal()" style="flex:1; background:#eee;">Cancelar</button>
-            <button onclick="adicionarItem()" style="flex:1; background:var(--p); color:white;">Salvar</button>
+        <h3 style="margin-top:0">Novo Item</h3>
+        <input type="text" id="in-nome" placeholder="Nome (ex: Arroz)">
+        <div style="display: flex; gap: 10px;">
+            <input type="number" id="in-qtd" placeholder="Qtd" value="1" style="flex: 1;">
+            <input type="number" id="in-preco" step="0.01" inputmode="decimal" placeholder="Preço Un." style="flex: 2;">
+        </div>
+        <div style="display: flex; gap: 10px; margin-top: 15px;">
+            <button onclick="fecharModal()" style="flex:1; background:#eee;">Voltar</button>
+            <button onclick="adicionarItem()" style="flex:1; background:var(--p); color:white;">Adicionar</button>
         </div>
     </div>
 </div>
 
+<div id="pdf-area" style="display: none;">
+    <h2 id="pdf-header" style="text-align: center; text-transform: uppercase; margin-bottom: 30px;"></h2>
+    <table class="pdf-table">
+        <thead>
+            <tr>
+                <th>Item</th>
+                <th>Qtd</th>
+                <th>V. Unit</th>
+                <th style="text-align: right;">Total</th>
+            </tr>
+        </thead>
+        <tbody id="pdf-body"></tbody>
+    </table>
+    <div style="text-align: right; margin-top: 30px; font-size: 1.4rem; font-weight: bold;">
+        Total Geral: R$ <span id="pdf-total">0,00</span>
+    </div>
+</div>
+
 <script>
-    let itens = JSON.parse(localStorage.getItem('compras_bruno_v3') || '[]');
+    let itens = JSON.parse(localStorage.getItem('compras_bruno_v4') || '[]');
 
     function render() {
         const container = document.getElementById('lista-container');
         container.innerHTML = '';
-        let total = 0;
+        let totalCarrinho = 0;
 
         itens.forEach((item, index) => {
-            if(item.checked) total += parseFloat(item.preco);
+            const subtotal = item.qtd * item.preco;
+            if(item.checked) totalCarrinho += subtotal;
             
             const div = document.createElement('div');
             div.className = 'item-card';
             div.innerHTML = `
                 <div class="item-info">
-                    <input type="checkbox" ${item.checked ? 'checked' : ''} onchange="toggleCheck(${index})">
-                    <span class="${item.checked ? 'strikethrough' : ''}">${item.nome}</span>
+                    <div class="item-main">
+                        <input type="checkbox" ${item.checked ? 'checked' : ''} onchange="toggleCheck(${index})">
+                        <span class="${item.checked ? 'strikethrough' : ''}" style="font-weight:600">${item.nome}</span>
+                    </div>
+                    <div class="item-details">
+                        ${item.qtd}x R$ ${item.preco.toFixed(2).replace('.', ',')}
+                    </div>
                 </div>
-                <div class="price-tag">R$ ${parseFloat(item.preco).toFixed(2).replace('.', ',')}</div>
+                <div class="price-tag">
+                    <span class="subtotal">R$ ${subtotal.toFixed(2).replace('.', ',')}</span>
+                </div>
             `;
             container.appendChild(div);
         });
 
-        document.getElementById('display-total').innerText = total.toLocaleString('pt-BR', {minimumFractionDigits: 2});
-        localStorage.setItem('compras_bruno_v3', JSON.stringify(itens));
+        document.getElementById('display-total').innerText = totalCarrinho.toLocaleString('pt-BR', {minimumFractionDigits: 2});
+        localStorage.setItem('compras_bruno_v4', JSON.stringify(itens));
     }
 
     function adicionarItem() {
         const nome = document.getElementById('in-nome').value;
-        const preco = document.getElementById('in-preco').value;
+        const qtd = parseFloat(document.getElementById('in-qtd').value);
+        const preco = parseFloat(document.getElementById('in-preco').value);
 
-        if(nome && preco) {
-            itens.push({ nome, preco: parseFloat(preco), checked: true });
+        if(nome && qtd > 0 && preco >= 0) {
+            itens.push({ nome, qtd, preco, checked: true });
             fecharModal();
             render();
+        } else {
+            alert("Preencha todos os campos corretamente!");
         }
     }
 
-    function abrirModal() { 
-        document.getElementById('modal').style.display = 'flex'; 
-        document.getElementById('in-nome').focus();
-    }
-    
-    function fecharModal() { 
-        document.getElementById('modal').style.display = 'none';
-        document.getElementById('in-nome').value = '';
-        document.getElementById('in-preco').value = '';
-    }
-
-    function toggleCheck(index) {
-        itens[index].checked = !itens[index].checked;
-        render();
-    }
-
-    function reiniciarLista() {
-        if(confirm("Zerar toda a lista?")) {
-            itens = [];
-            render();
-        }
-    }
+    function abrirModal() { document.getElementById('modal').style.display = 'flex'; document.getElementById('in-nome').focus(); }
+    function fecharModal() { document.getElementById('modal').style.display = 'none'; document.querySelectorAll('.modal-content input').forEach(i => i.value = (i.id==='in-qtd'?'1':'')); }
+    function toggleCheck(index) { itens[index].checked = !itens[index].checked; render(); }
+    function reiniciarLista() { if(confirm("Deseja iniciar uma nova lista?")) { itens = []; render(); } }
 
     function gerarPDF() {
         const marcados = itens.filter(i => i.checked);
-        if(marcados.length === 0) return alert("Marque pelo menos um item para finalizar!");
+        if(marcados.length === 0) return alert("Selecione os itens no carrinho primeiro!");
 
-        // Preenche o template do PDF
-        const dataAtual = new Date().toLocaleString('pt-BR');
-        document.getElementById('pdf-data').innerText = `Gerado em: ${dataAtual}`;
+        const hoje = new Date();
+        const dataFormatada = hoje.toLocaleDateString('pt-BR');
+        document.getElementById('pdf-header').innerText = `LISTA DE COMPRAS DIA ${dataFormatada}`;
         
-        let htmlItens = '';
-        let total = 0;
+        let htmlBody = '';
+        let totalGeral = 0;
+        
         marcados.forEach(i => {
-            total += i.preco;
-            htmlItens += `<tr style="border-bottom: 1px solid #eee;">
-                <td style="padding: 10px;">${i.nome}</td>
-                <td style="padding: 10px; text-align: right;">R$ ${i.preco.toFixed(2).replace('.', ',')}</td>
-            </tr>`;
+            const sub = i.qtd * i.preco;
+            totalGeral += sub;
+            htmlBody += `
+                <tr>
+                    <td>${i.nome}</td>
+                    <td>${i.qtd}</td>
+                    <td>R$ ${i.preco.toFixed(2).replace('.', ',')}</td>
+                    <td style="text-align: right;">R$ ${sub.toFixed(2).replace('.', ',')}</td>
+                </tr>`;
         });
 
-        document.getElementById('pdf-body').innerHTML = htmlItens;
-        document.getElementById('pdf-total').innerText = total.toLocaleString('pt-BR', {minimumFractionDigits: 2});
+        document.getElementById('pdf-body').innerHTML = htmlBody;
+        document.getElementById('pdf-total').innerText = totalGeral.toLocaleString('pt-BR', {minimumFractionDigits: 2});
 
-        // Configuração e Geração
         const elemento = document.getElementById('pdf-area');
-        elemento.style.display = 'block'; // Mostra temporariamente para capturar
+        elemento.style.display = 'block';
 
         const opt = {
-            margin: 1,
-            filename: `Compra_${new Date().toISOString().slice(0,10)}.pdf`,
+            margin: 0.5,
+            filename: `Lista_${dataFormatada.replace(/\//g, '-')}.pdf`,
             image: { type: 'jpeg', quality: 0.98 },
-            html2canvas: { scale: 2 },
-            jsPDF: { unit: 'in', format: 'letter', orientation: 'portrait' }
+            html2canvas: { scale: 3 },
+            jsPDF: { unit: 'in', format: 'a4', orientation: 'portrait' }
         };
 
         html2pdf().set(opt).from(elemento).save().then(() => {
-            elemento.style.display = 'none'; // Esconde de novo
+            elemento.style.display = 'none';
         });
     }
 
