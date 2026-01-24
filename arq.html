@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Lista do Bruno</title>
+    <style>
+        :root { --p: #2ecc71; --bg: #f4f7f6; }
+        body { font-family: -apple-system, sans-serif; background: var(--bg); margin: 0; padding: 15px 15px 100px 15px; }
+        .header { 
+            position: sticky; top: 10px; background: var(--p); color: white; 
+            padding: 15px; border-radius: 15px; text-align: center; 
+            box-shadow: 0 4px 10px rgba(0,0,0,0.1); z-index: 10; margin-bottom: 20px;
+        }
+        .cat { background: white; border-radius: 12px; padding: 15px; margin-bottom: 15px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); }
+        .cat h2 { font-size: 0.75rem; color: #999; text-transform: uppercase; margin: 0 0 10px 0; border-bottom: 1px solid #eee; }
+        .row { display: flex; align-items: center; justify-content: space-between; padding: 12px 0; border-bottom: 1px solid #f9f9f9; }
+        .check-area { display: flex; align-items: center; flex: 1; }
+        input[type="checkbox"] { width: 22px; height: 22px; margin-right: 12px; }
+        input[type="checkbox"]:checked + span { text-decoration: line-through; color: #ccc; }
+        .price { width: 85px; padding: 8px; border: 1px solid #ddd; border-radius: 8px; text-align: right; font-size: 1rem; }
+        .btn-limpar { background: #e74c3c; color: white; border: none; padding: 10px; border-radius: 8px; width: 100%; margin-top: 10px; font-weight: bold; }
+    </style>
+</head>
+<body>
+
+<div class="header">
+    <div style="font-size: 0.9rem;">Total no Carrinho</div>
+    <div style="font-size: 2rem; font-weight: bold;">R$ <span id="total">0,00</span></div>
+</div>
+
+<div id="lista"></div>
+<button class="btn-limpar" onclick="limparTudo()">Limpar Lista</button>
+
+<script>
+    const categorias = [
+        {t: 'Laticínios e Padaria', i: ['Leite', 'Suquinho', 'Toddy', 'Mussarela', 'Pão de forma', 'Ovos', 'Danubio queijo minas']},
+        {t: 'Higiene', i: ['Lenço umidecido', 'Desodorante']},
+        {t: 'Carnes e Vegetais', i: ['Frango', 'Tomate']},
+        {t: 'Frutas e Bebidas', i: ['Uva', 'Melão', 'Morango', 'Pêra', 'Mamão', 'Coquinha']},
+        {t: 'Mercearia', i: ['Atum', 'Banana', 'Doce de leite', 'Rap10', 'Semente chia', 'Iogurte natural']}
+    ];
+
+    const container = document.getElementById('lista');
+
+    // Carregar dados salvos
+    const salvos = JSON.parse(localStorage.getItem('compras_bruno') || '{}');
+
+    categorias.forEach((cat, cIdx) => {
+        let div = document.createElement('div');
+        div.className = 'cat';
+        let html = `<h2>${cat.t}</h2>`;
+        cat.i.forEach((item, iIdx) => {
+            const id = `item-${cIdx}-${iIdx}`;
+            const dados = salvos[id] || {checked: false, price: ''};
+            html += `
+            <div class="row">
+                <label class="check-area">
+                    <input type="checkbox" id="ck-${id}" ${dados.checked ? 'checked' : ''} onchange="salvar('${id}')">
+                    <span>${item}</span>
+                </label>
+                <input type="number" id="pr-${id}" step="0.01" class="price" value="${dados.price}" placeholder="0,00" oninput="salvar('${id}')">
+            </div>`;
+        });
+        div.innerHTML = html;
+        container.appendChild(div);
+    });
+
+    function salvar(id) {
+        const check = document.getElementById(`ck-${id}`).checked;
+        const preco = document.getElementById(`pr-${id}`).value;
+        
+        const atual = JSON.parse(localStorage.getItem('compras_bruno') || '{}');
+        atual[id] = {checked: check, price: preco};
+        localStorage.setItem('compras_bruno', JSON.stringify(atual));
+        somar();
+    }
+
+    function somar() {
+        let t = 0;
+        document.querySelectorAll('.price').forEach(i => {
+            let v = parseFloat(i.value);
+            if(v) t += v;
+        });
+        document.getElementById('total').innerText = t.toLocaleString('pt-BR', {minimumFractionDigits: 2});
+    }
+
+    function limparTudo() {
+        if(confirm('Limpar preços e marcações?')) {
+            localStorage.removeItem('compras_bruno');
+            location.reload();
+        }
+    }
+    
+    somar(); // Inicializa o total
+</script>
+
+</body>
+</html>
